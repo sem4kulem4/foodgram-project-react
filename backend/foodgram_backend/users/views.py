@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework import mixins
 
 from .models import Follow, User
+from .permissions import AuthorOrAdminOrReadOnly, Admin
 from .serializers import CreateUserSerializer, FollowSerializer, FollowOnUserSerializer, ExistingUserSerializer, \
     IsSubscribedSerializer
 
@@ -14,33 +15,39 @@ class UserViewSet(djoser.views.UserViewSet):
     queryset = User.objects.all()
     serializer_class = ExistingUserSerializer
 
+    def get_permissions(self):
+        if self.action in ('list', 'retrieve'):
+            return (permissions.AllowAny(),)
+        if self.action in ('destroy',):
+            return (Admin(),)
+        return (AuthorOrAdminOrReadOnly(),)
+
     def get_serializer_class(self):
         if self.action in ('list', 'retrieve'):
             return ExistingUserSerializer
         return CreateUserSerializer
 
+    def destroy(self, request, *args, **kwargs):
+        user_id = kwargs.get('id')
+        User.objects.get(id=user_id).delete()
+        return Response(status=status.HTTP_200_OK)
 
-class FollowViewSet(viewsets.ModelViewSet):
-    """Обработка подписок для GET-запросов."""
+
+class ListCreateDestroyViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin,
+                               viewsets.GenericViewSet):
+    pass
+
+
+class FollowOnUserViewSet(ListCreateDestroyViewSet):
+    """Создание подписки."""
     serializer_class = FollowSerializer
     permission_classes = (permissions.IsAuthenticated,)
-    http_method_names = ('get',)
+    http_method_names = ['get', 'post', 'delete']
 
     def get_queryset(self):
         current_user = self.request.user
         queryset = Follow.objects.filter(user=current_user)
         return queryset
-
-
-class CreateDestroyViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
-    pass
-
-
-class FollowOnUserViewSet(CreateDestroyViewSet):
-    """Создание подписки."""
-    serializer_class = FollowOnUserSerializer
-    permission_classes = (permissions.IsAuthenticated,)
-    queryset = Follow.objects.all()
 
     def create(self, request, **kwargs):
         id = self.kwargs.get('user_id')
