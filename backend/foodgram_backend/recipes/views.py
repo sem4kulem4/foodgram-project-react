@@ -3,15 +3,15 @@ import csv
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from rest_framework import status, viewsets, permissions
+from rest_framework import filters, status, viewsets, permissions
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 
-from users.models import User
 from .models import Favorite, Ingredient, Recipe, Tag, TagsInRecipe, ShoppingCart, IngredientsInRecipe
 from .serializers import (CreateRecipeSerializer, FavoriteSerializer,
                           IngredientsSerializer, RecipeSerializer,
                           TagSerializer, ShoppingCartSerializer)
+from users.paginations import PagePagination
 from users.permissions import AuthorOrAdminOrReadOnly, ReadOnly
 
 
@@ -19,6 +19,8 @@ class TagViewSet(viewsets.ModelViewSet):
     serializer_class = TagSerializer
     queryset = Tag.objects.all()
     http_method_names = ('get',)
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('^name',)
 
 
 class IngredientViewSet(viewsets.ModelViewSet):
@@ -30,7 +32,28 @@ class IngredientViewSet(viewsets.ModelViewSet):
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
-    permission_classes = [AuthorOrAdminOrReadOnly,]
+    permission_classes = [AuthorOrAdminOrReadOnly, ]
+    pagination_class = PagePagination
+
+    def get_queryset(self):
+        if not self.request.user.is_anonymous:
+            user = self.request.user
+            queryset = Recipe.objects.all()
+            is_favorited = int(self.request.query_params.get('is_favorited', default=0))
+            is_in_shopping_cart = int(self.request.query_params.get('is_in_shopping_cart', default=0))
+            author_id = int(self.request.query_params.get('author', default=0))
+            tags = self.request.query_params.getlist('tags', default=0)
+            if is_favorited == 1:
+                queryset = queryset.filter(favorite_recipe__user=user)
+            if is_in_shopping_cart == 1:
+                queryset = queryset.filter(shopping_cart_recipe__user=user)
+            if author_id != 0:
+                queryset = queryset.filter(author_id=author_id)
+            if tags != 0:
+                for tag in tags:
+                    queryset = queryset.filter(tags__slug=tag)
+            return queryset
+        return Recipe.objects.all()
 
     def get_permissions(self):
         if self.action in ('retrieve', 'list'):
@@ -45,20 +68,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def create_ingredients_in_recipe(self, recipe, ingredients):
         for ingredient in ingredients:
-            ingredient_id = ingredient['id']
+            ingredient_id = ingredient['ingredient']['id']
             amount = ingredient['amount']
             IngredientsInRecipe.objects.create(
-                ingredient=ingredient_id,
+                ingredient_id=ingredient_id,
                 recipe=recipe,
                 amount=amount
             )
 
     def create_tags_in_recipe(self, recipe, tags):
         for tag in tags:
-            tag_id = tag['id']
             TagsInRecipe.objects.create(
                 recipe=recipe,
-                tag=tag_id
+                tag_id=tag
             )
 
     def create(self, request, *args, **kwargs):
@@ -68,9 +90,29 @@ class RecipeViewSet(viewsets.ModelViewSet):
         )
 
         if serializer.is_valid(raise_exception=True):
-            print(serializer.validated_data)
-            #recipe = Recipe.objects.create(author=self.request.user, **serializer.validated_data)
-            ingredients = serializer.validated_data.pop('ingredients')
+            ingredients = serializer.validated_data.pop('ingredientsinrecipe_set')
+            tags = serializer.validated_data.pop('tags')
+            recipe = get_object_or_404(Recipe, id=self.kwargs['recipe_id'])
+            TagsInRecipe.objects.filter(recipe=recipe).delete()
+            IngredientsInRecipe.objects.filter(recipe=recipe).delete()
+
+            recipe = Recipe.objects.update(**serializer.validated_data)
+            self.create_ingredients_in_recipe(recipe=recipe, ingredients=ingredients)
+            self.create_tags_in_recipe(recipe=recipe, tags=tags)
+            serializer = RecipeSerializer(
+                instance=recipe,
+                context={'request': request}
+            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, *args, **kwargs):
+        serializer = CreateRecipeSerializer(
+            data=self.request.data,
+            context={'request': self.request}
+        )
+        if serializer.is_valid(raise_exception=True):
+            ingredients = serializer.validated_data.pop('ingredientsinrecipe_set')
             tags = serializer.validated_data.pop('tags')
             recipe = Recipe.objects.create(**serializer.validated_data)
 

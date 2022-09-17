@@ -6,14 +6,15 @@ from rest_framework.response import Response
 from rest_framework import mixins
 
 from .models import Follow, User
+from .paginations import PagePagination
 from .permissions import AuthorOrAdminOrReadOnly, Admin
-from .serializers import CreateUserSerializer, FollowSerializer, FollowOnUserSerializer, ExistingUserSerializer, \
-    IsSubscribedSerializer
+from .serializers import CreateUserSerializer, FollowSerializer, ExistingUserSerializer
 
 
 class UserViewSet(djoser.views.UserViewSet):
     queryset = User.objects.all()
     serializer_class = ExistingUserSerializer
+    pagination_class = PagePagination
 
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):

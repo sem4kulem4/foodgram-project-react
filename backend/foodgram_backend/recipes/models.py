@@ -145,5 +145,6 @@ class ShoppingCart(models.Model):
                 name='unique_shoppingcart'
             )
         ]
+
     def __str__(self):
         return f'{self.user} добавил в список покупок {self.recipe}'

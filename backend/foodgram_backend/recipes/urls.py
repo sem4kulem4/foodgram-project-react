@@ -1,8 +1,11 @@
 from django.urls import path, include
 from rest_framework import routers
 
-from .views import FavoriteViewSet, IngredientViewSet, RecipeViewSet, TagViewSet, ShoppingCartViewSet, \
-    download_shopping_cart
+from .views import (
+    FavoriteViewSet, IngredientViewSet,
+    RecipeViewSet, TagViewSet,
+    ShoppingCartViewSet, download_shopping_cart
+)
 
 app_name = 'recipes'
 

@@ -1,11 +1,14 @@
 from django.contrib import admin
-
 from .models import Favorite, Ingredient, IngredientsInRecipe, Tag, TagsInRecipe, Recipe, ShoppingCart
 
 
-# На странице рецепта вывести общее число добавлений этого рецепта в избранное.
 class RecipeAdmin(admin.ModelAdmin):
-    list_filter = ('author', 'name', 'tags')
+    list_filter = ('author', 'name', 'tags', )
+    list_display = ('author', 'name', 'is_favorite_count', )
+
+    def is_favorite_count(self, obj):
+        result = Favorite.objects.filter(recipe=obj).count()
+        return result
 
 
 class IngredientsAdmin(admin.ModelAdmin):

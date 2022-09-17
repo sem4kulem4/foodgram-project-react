@@ -93,8 +93,6 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         fields = ('author', 'ingredients', 'tags', 'image', 'name', 'text', 'cooking_time')
 
 
-
-
 class ShortRecipeSerializer(serializers.ModelSerializer):
     """Короткий вариант рецепта для отображения в подписках."""
     image = Base64ImageField(max_length=None, use_url=True)

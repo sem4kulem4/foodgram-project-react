@@ -60,40 +60,6 @@ class ExistingUserSerializer(serializers.ModelSerializer):
         return True
 
 
-class IsSubscribedSerializer(serializers.ModelSerializer):
-    """Дополнительный вложенный сериализатор для вывода."""
-    recipes = serializers.SerializerMethodField(read_only=True)
-    recipes_count = serializers.SerializerMethodField(read_only=True)
-    is_subscribed = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'recipes', 'recipes_count', 'is_subscribed')
-
-    def get_recipes(self, obj):
-        recipes = Recipe.objects.filter(author_id=obj.id)
-        serializer = ShortRecipeSerializer(recipes, many=True)
-        return serializer.data
-
-    def get_recipes_count(self, obj):
-        recipes = Recipe.objects.filter(author_id=obj.id)
-        return recipes.count()
-
-    def get_is_subscribed(self, obj):
-        user = self.context.get('request').user
-        if Follow.objects.get(author=obj, user=user):
-            return True
-        return False
-
-
-class FollowOnUserSerializer(serializers.ModelSerializer):
-    id = serializers.PrimaryKeyRelatedField(read_only=True)
-
-    class Meta:
-        model = Follow
-        fields = ('id',)
-
-
 class FollowSerializer(serializers.ModelSerializer):
     """Сериализатор GET-запросов к подпискам."""
     email = serializers.ReadOnlyField(source='author.email')
@@ -129,4 +95,3 @@ class FollowSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         return obj.user.follower.filter(author=obj.author).exists()
-
