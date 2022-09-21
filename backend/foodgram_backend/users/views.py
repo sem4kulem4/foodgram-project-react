@@ -8,7 +8,11 @@ from rest_framework import mixins
 from .models import Follow, User
 from .paginations import PagePagination
 from .permissions import AuthorOrAdminOrReadOnly, Admin
-from .serializers import CreateUserSerializer, FollowSerializer, ExistingUserSerializer
+from .serializers import (
+    CreateUserSerializer,
+    FollowSerializer,
+    ExistingUserSerializer
+)
 
 
 class UserViewSet(djoser.views.UserViewSet):
@@ -34,8 +38,12 @@ class UserViewSet(djoser.views.UserViewSet):
         return Response(status=status.HTTP_200_OK)
 
 
-class ListCreateDestroyViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin,
-                               viewsets.GenericViewSet):
+class ListCreateDestroyViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet
+):
     pass
 
 
@@ -54,17 +62,29 @@ class FollowOnUserViewSet(ListCreateDestroyViewSet):
         id = self.kwargs.get('user_id')
         author = get_object_or_404(User, id=id)
         if author == self.request.user:
-            return Response('Невозможно подписаться на самого себя!', status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                'Невозможно подписаться на самого себя!',
+                status=status.HTTP_400_BAD_REQUEST
+            )
         if Follow.objects.filter(user=self.request.user, author=author).exists():
-            return Response('Подписка уже существует', status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                'Подписка уже существует',
+                status=status.HTTP_400_BAD_REQUEST
+            )
         Follow.objects.create(user=self.request.user, author=author)
-        return Response('Подписка создана', status=status.HTTP_201_CREATED)
+        return Response(
+            'Подписка создана',
+            status=status.HTTP_201_CREATED
+        )
 
     @action(methods=['delete'], detail=False)
     def delete(self, request, **kwargs):
         id = self.kwargs.get('user_id')
         author = get_object_or_404(User, id=id)
         if not Follow.objects.filter(user=self.request.user, author=author).exists():
-            return Response('Нечего удалять. Вы не подписаны на этого пользователя', status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                'Нечего удалять. Вы не подписаны на этого пользователя',
+                status=status.HTTP_400_BAD_REQUEST
+            )
         Follow.objects.filter(user=self.request.user, author=author).delete()
         return Response('Подписка отменена')

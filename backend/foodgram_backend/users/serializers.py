@@ -1,6 +1,5 @@
-from djoser.serializers import UserSerializer, UserCreateSerializer
+from djoser.serializers import UserCreateSerializer
 from rest_framework import serializers
-from drf_extra_fields.fields import Base64ImageField
 
 from .models import Follow, User
 from recipes.models import Recipe
@@ -38,7 +37,10 @@ class CreateUserSerializer(UserCreateSerializer):
 class ExistingUserSerializer(serializers.ModelSerializer):
     """Для существующих пользователей."""
 
-    is_subscribed = serializers.SerializerMethodField(read_only=True)
+    is_subscribed = serializers.SerializerMethodField(
+        read_only=True,
+        method_name='get_is_subscribed'
+    )
 
     class Meta:
         model = User
@@ -67,9 +69,18 @@ class FollowSerializer(serializers.ModelSerializer):
     username = serializers.ReadOnlyField(source='author.username')
     first_name = serializers.ReadOnlyField(source='author.first_name')
     last_name = serializers.ReadOnlyField(source='author.last_name')
-    recipes_count = serializers.SerializerMethodField(read_only=True)
-    recipes = serializers.SerializerMethodField(read_only=True)
-    is_subscribed = serializers.SerializerMethodField(read_only=True)
+    recipes_count = serializers.SerializerMethodField(
+        read_only=True,
+        method_name='get_recipes_count'
+    )
+    recipes = serializers.SerializerMethodField(
+        read_only=True,
+        method_name='get_recipes'
+    )
+    is_subscribed = serializers.SerializerMethodField(
+        read_only=True,
+        method_name='get_is_subscribed'
+    )
 
     class Meta:
         model = Follow

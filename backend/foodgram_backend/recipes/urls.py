@@ -14,10 +14,14 @@ router.register('tags', TagViewSet, basename='tags')
 router.register('ingredients', IngredientViewSet, basename='ingredients')
 router.register('recipes', RecipeViewSet, basename='recipes')
 router.register(
-    r'recipes/(?P<recipe_id>\d+)/favorite', FavoriteViewSet, basename='favorite'
+    r'recipes/(?P<recipe_id>\d+)/favorite',
+    FavoriteViewSet,
+    basename='favorite'
 )
 router.register(
-    r'recipes/(?P<recipe_id>\d+)/shopping_cart', ShoppingCartViewSet, basename='shopping_cart'
+    r'recipes/(?P<recipe_id>\d+)/shopping_cart',
+    ShoppingCartViewSet,
+    basename='shopping_cart'
 )
 
 urlpatterns = [

@@ -1,18 +1,24 @@
 from django.urls import path, include
 from rest_framework import routers
 
-from djoser import views
-from .views import (  # FollowViewSet,
+from .views import (
     FollowOnUserViewSet,
-    UserViewSet)
+    UserViewSet
+)
 
 app_name = 'users'
 
 router = routers.DefaultRouter()
-router.register('users/subscriptions', FollowOnUserViewSet, basename='subscriptions')
+router.register(
+    'users/subscriptions',
+    FollowOnUserViewSet,
+    basename='subscriptions'
+)
 router.register('users', UserViewSet, basename='users')
 router.register(
-    r'users/(?P<user_id>\d+)/subscribe', FollowOnUserViewSet, basename='following'
+    r'users/(?P<user_id>\d+)/subscribe',
+    FollowOnUserViewSet,
+    basename='following'
 )
 urlpatterns = [
     path('', include(router.urls)),
