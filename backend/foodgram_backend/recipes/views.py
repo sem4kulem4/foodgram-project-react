@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import filters, status, viewsets, permissions
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 
 from .models import (
     Favorite, Ingredient,
@@ -15,8 +16,8 @@ from .models import (
 )
 from .serializers import (CreateRecipeSerializer, FavoriteSerializer,
                           IngredientsSerializer, RecipeSerializer,
-                          TagSerializer, ShoppingCartSerializer)
-from users.paginations import PagePagination
+                          TagSerializer, ShoppingCartSerializer,
+                          ShortRecipeSerializer)
 from users.permissions import AuthorOrAdminOrReadOnly, ReadOnly
 
 
@@ -24,6 +25,7 @@ class TagViewSet(viewsets.ModelViewSet):
     serializer_class = TagSerializer
     queryset = Tag.objects.all()
     http_method_names = ('get',)
+    pagination_class = None
     filter_backends = (filters.SearchFilter,)
     search_fields = ('^name',)
 
@@ -36,8 +38,9 @@ class IngredientViewSet(viewsets.ModelViewSet):
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
-    permission_classes = (AuthorOrAdminOrReadOnly, )
-    pagination_class = PagePagination
+    permission_classes = (AuthorOrAdminOrReadOnly,)
+    pagination_class = PageNumberPagination
+    pagination_class.page_size = 6
 
     def get_queryset(self):
         if not self.request.user.is_anonymous:
@@ -152,19 +155,40 @@ class FavoriteViewSet(viewsets.ModelViewSet):
     def create(self, request, **kwargs):
         recipe_id = self.kwargs.get('recipe_id')
         recipe = get_object_or_404(Recipe, id=recipe_id)
-        if Favorite.objects.filter(user=self.request.user, recipe=recipe).exists():
+        if Favorite.objects.filter(
+                user=self.request.user, recipe=recipe
+        ).exists():
             return Response(
                 'Рецепт уже есть в избранном!',
                 status=status.HTTP_400_BAD_REQUEST
             )
-        Favorite.objects.create(user=self.request.user, recipe=recipe)
-        return Response(status=status.HTTP_201_CREATED)
+        favorite = Favorite.objects.create(
+            user=self.request.user, recipe=recipe
+        )
+        context = {
+            'id': favorite.id,
+            'name': favorite.recipe.name,
+            'image': favorite.recipe.image,
+            'cooking_time': favorite.recipe.cooking_time
+        }
+        serializer_output = ShortRecipeSerializer(
+            data={'recipe_id': recipe_id},
+            context=context
+        )
+
+        serializer_output.is_valid(raise_exception=True)
+        return Response(
+            serializer_output.data,
+            status=status.HTTP_201_CREATED
+        )
 
     @action(methods=['delete'], detail=False)
     def delete(self, request, **kwargs):
         recipe_id = self.kwargs.get('recipe_id')
         recipe = get_object_or_404(Recipe, id=recipe_id)
-        if not Favorite.objects.filter(user=self.request.user, recipe=recipe).exists():
+        if not Favorite.objects.filter(
+                user=self.request.user, recipe=recipe
+        ).exists():
             return Response(
                 'Этот рецепт не в избранном',
                 status=status.HTTP_400_BAD_REQUEST
@@ -186,7 +210,9 @@ class ShoppingCartViewSet(viewsets.ModelViewSet):
     def create(self, request, **kwargs):
         recipe_id = self.kwargs.get('recipe_id')
         recipe = get_object_or_404(Recipe, id=recipe_id)
-        if ShoppingCart.objects.filter(user=self.request.user, recipe=recipe).exists():
+        if ShoppingCart.objects.filter(
+                user=self.request.user, recipe=recipe
+        ).exists():
             return Response(
                 'Рецепт уже есть в списке покупок!',
                 status=status.HTTP_400_BAD_REQUEST
@@ -201,7 +227,9 @@ class ShoppingCartViewSet(viewsets.ModelViewSet):
     def delete(self, request, **kwargs):
         recipe_id = self.kwargs.get('recipe_id')
         recipe = get_object_or_404(Recipe, id=recipe_id)
-        if not ShoppingCart.objects.filter(user=self.request.user, recipe=recipe).exists():
+        if not ShoppingCart.objects.filter(
+                user=self.request.user, recipe=recipe
+        ).exists():
             return Response(
                 'Этого рецепта нет вашем списке покупок',
                 status=status.HTTP_400_BAD_REQUEST

@@ -2,26 +2,28 @@ import djoser.views
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework import mixins
 
 from .models import Follow, User
-from .paginations import PagePagination
 from .permissions import AuthorOrAdminOrReadOnly, Admin
 from .serializers import (
     CreateUserSerializer,
     FollowSerializer,
+    FollowCreateSerializer,
+    FollowOutputSerializer,
     ExistingUserSerializer
 )
+from recipes.models import Recipe
 
 
 class UserViewSet(djoser.views.UserViewSet):
     queryset = User.objects.all()
-    serializer_class = ExistingUserSerializer
-    pagination_class = PagePagination
+    pagination_class = PageNumberPagination
 
     def get_permissions(self):
-        if self.action in ('list', 'retrieve'):
+        if self.action in ('list', 'retrieve', 'create'):
             return (permissions.AllowAny(),)
         if self.action in ('destroy',):
             return (Admin(),)
@@ -51,6 +53,8 @@ class FollowOnUserViewSet(ListCreateDestroyViewSet):
     """Создание подписки."""
     serializer_class = FollowSerializer
     permission_classes = (permissions.IsAuthenticated,)
+    pagination_class = PageNumberPagination
+    pagination_class.page_size = 6
     http_method_names = ['get', 'post', 'delete']
 
     def get_queryset(self):
@@ -61,19 +65,44 @@ class FollowOnUserViewSet(ListCreateDestroyViewSet):
     def create(self, request, **kwargs):
         id = self.kwargs.get('user_id')
         author = get_object_or_404(User, id=id)
+
         if author == self.request.user:
             return Response(
                 'Невозможно подписаться на самого себя!',
                 status=status.HTTP_400_BAD_REQUEST
             )
-        if Follow.objects.filter(user=self.request.user, author=author).exists():
+        if Follow.objects.filter(
+                user=self.request.user, author=author
+        ).exists():
             return Response(
                 'Подписка уже существует',
                 status=status.HTTP_400_BAD_REQUEST
             )
-        Follow.objects.create(user=self.request.user, author=author)
+
+        data = {
+            'user': request.user.id,
+            'author': author.id
+        }
+        serializer = FollowCreateSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        context = {
+            'request': request,
+            'id': id,
+            'email': author.email,
+            'username': author.username,
+            'first_name': author.first_name,
+            'last_name': author.last_name,
+            'recipes_count': Recipe.objects.filter(author=author).count()
+        }
+        serializer_output = FollowOutputSerializer(
+            data={'id': id},
+            context=context
+        )
+        serializer_output.is_valid(raise_exception=True)
+
         return Response(
-            'Подписка создана',
+            data=serializer_output.data,
             status=status.HTTP_201_CREATED
         )
 
@@ -81,7 +110,9 @@ class FollowOnUserViewSet(ListCreateDestroyViewSet):
     def delete(self, request, **kwargs):
         id = self.kwargs.get('user_id')
         author = get_object_or_404(User, id=id)
-        if not Follow.objects.filter(user=self.request.user, author=author).exists():
+        if not Follow.objects.filter(
+                user=self.request.user, author=author
+        ).exists():
             return Response(
                 'Нечего удалять. Вы не подписаны на этого пользователя',
                 status=status.HTTP_400_BAD_REQUEST

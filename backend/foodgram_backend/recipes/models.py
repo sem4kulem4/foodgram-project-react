@@ -77,7 +77,7 @@ class Recipe(models.Model):
     )
 
     def __str__(self):
-        return f'{self.name} by {self.author}'
+        return f'{self.name} by {self.author.username}'
 
 
 class IngredientsInRecipe(models.Model):

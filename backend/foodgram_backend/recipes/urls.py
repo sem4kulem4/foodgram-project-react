@@ -25,8 +25,11 @@ router.register(
 )
 
 urlpatterns = [
-    path(r'recipes/download_shopping_cart/', download_shopping_cart,
-         name='download'),
+    path(
+        r'recipes/download_shopping_cart/',
+        download_shopping_cart,
+        name='download'
+    ),
     path('', include(router.urls)),
 
 ]

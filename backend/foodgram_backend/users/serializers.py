@@ -106,3 +106,81 @@ class FollowSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         return obj.user.follower.filter(author=obj.author).exists()
+
+
+class FollowCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Follow
+        fields = (
+            'user',
+            'author'
+        )
+
+    def validate_subscription(self, value):
+        user = self.context['request'].user
+        if not user == value:
+            return value
+        raise serializers.ValidationError(
+            'Вы не можете подписаться на самого себя'
+        )
+
+
+class FollowOutputSerializer(serializers.Serializer):
+    """Сериализатор вывода после создания подписки."""
+    id = serializers.SerializerMethodField(
+        method_name='get_id'
+    )
+    email = serializers.SerializerMethodField(
+        method_name='get_email'
+    )
+    username = serializers.SerializerMethodField(
+        method_name='get_username'
+    )
+    first_name = serializers.SerializerMethodField(
+        method_name='get_first_name'
+    )
+    last_name = serializers.SerializerMethodField(
+        method_name='get_last_name'
+    )
+    is_subscribed = serializers.SerializerMethodField(
+        method_name='get_is_subscribed'
+    )
+    recipes = serializers.SerializerMethodField(
+        method_name='get_recipes'
+    )
+    recipes_count = serializers.SerializerMethodField(
+        method_name='get_recipes_count'
+    )
+
+    def get_id(self, obj):
+        id = int(self.context['id'])
+        return id
+
+    def get_email(self, obj):
+        email = self.context['email']
+        return email
+
+    def get_username(self, obj):
+        username = self.context['username']
+        return username
+
+    def get_first_name(self, obj):
+        first_name = self.context['first_name']
+        return first_name
+
+    def get_last_name(self, obj):
+        last_name = self.context['last_name']
+        return last_name
+
+    def get_is_subscribed(self, obj):
+        return True
+
+    def get_recipes(self, obj):
+        author = User.objects.get(id=self.context['id'])
+        recipes = Recipe.objects.filter(author=author)
+        serializer = ShortRecipeSerializer(recipes, many=True)
+        return serializer.data
+
+    def get_recipes_count(self, obj):
+        recipes_count = self.context['recipes_count']
+        return recipes_count

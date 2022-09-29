@@ -2,7 +2,10 @@ Django==3.2.15
 djangorestframework==3.13.1
 psycopg2-binary==2.8.6
 Pillow==9.2.0
-django-extra-fields==0.3
+django-extra-fields==3.0.2
 djoser
 djangorestframework-simplejwt==4.7.2
 django-filter==22.1
+gunicorn==20.1.0
+django-cors-headers==3.13.0
+

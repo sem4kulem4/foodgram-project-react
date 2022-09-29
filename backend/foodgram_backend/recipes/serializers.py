@@ -64,7 +64,7 @@ class RecipeIngredientAmountSerializer(serializers.ModelSerializer):
         amount = data.get('amount')
         if amount < 0:
             raise serializers.ValidationError(
-                f'Количество ингредиента не может быть отрицательным!'
+                f'Количество не может быть отрицательным!'
             )
         return data
 
@@ -87,10 +87,15 @@ class RecipeSerializer(serializers.ModelSerializer):
         read_only=True,
         method_name='get_is_in_shopping_cart'
     )
+    is_favorited = serializers.SerializerMethodField(
+        read_only=True,
+        method_name='get_is_favorited'
+    )
 
     class Meta:
         model = Recipe
         fields = (
+            'id',
             'author',
             'name',
             'image',
@@ -98,7 +103,8 @@ class RecipeSerializer(serializers.ModelSerializer):
             'ingredients',
             'tags',
             'cooking_time',
-            'is_in_shopping_cart'
+            'is_in_shopping_cart',
+            'is_favorited'
         )
 
     def get_is_in_shopping_cart(self, obj):
@@ -106,6 +112,12 @@ class RecipeSerializer(serializers.ModelSerializer):
             return False
         user = self.context.get('request').user
         return ShoppingCart.objects.filter(user=user, recipe=obj).exists()
+
+    def get_is_favorited(self, obj):
+        if self.context.get('request').user.is_anonymous:
+            return False
+        user = self.context.get('request').user
+        return Favorite.objects.filter(user=user, recipe=obj).exists()
 
 
 class CreateRecipeSerializer(serializers.ModelSerializer):
@@ -140,23 +152,54 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     'В запросе замечены дублирующиеся ингредиенты!'
                 )
-            else:
-                no_double_ingredients_id.append(ingredient.get('ingredient').get('id'))
+            no_double_ingredients_id.append(
+                ingredient.get('ingredient').get('id')
+            )
 
         if len(ingredients_list) == 0:
-            return serializers.ValidationError('Вы не добавили ни одного ингредиента!')
-        if cooking_time < 0:
-            raise serializers.ValidationError('Время приготовления не может быть отрицательным!')
+            return serializers.ValidationError(
+                'Вы не добавили ни одного ингредиента!'
+            )
+        if cooking_time <= 0:
+            raise serializers.ValidationError(
+                'Время приготовления должно быть больше нуля!'
+            )
         return data
 
 
 class ShortRecipeSerializer(serializers.ModelSerializer):
     """Короткий вариант рецепта для отображения в подписках."""
-    image = Base64ImageField(max_length=None, use_url=True)
+    id = serializers.SerializerMethodField(method_name='get_id')
+    name = serializers.SerializerMethodField(method_name='get_name')
+    image = serializers.SerializerMethodField(method_name='get_image')
+    cooking_time = serializers.SerializerMethodField(
+        method_name='get_cooking_time'
+    )
 
     class Meta:
         model = Recipe
-        fields = ('name', 'image', 'cooking_time')
+        fields = (
+            'id',
+            'name',
+            'cooking_time',
+            'image'
+        )
+
+    def get_id(self, obj):
+        id = int(self.context['id'])
+        return id
+
+    def get_name(self, obj):
+        name = self.context['name']
+        return name
+
+    def get_image(self, obj):
+        image = str(self.context['image'])
+        return image
+
+    def get_cooking_time(self, obj):
+        cooking_time = self.context['cooking_time']
+        return cooking_time
 
 
 class FavoriteSerializer(serializers.ModelSerializer):

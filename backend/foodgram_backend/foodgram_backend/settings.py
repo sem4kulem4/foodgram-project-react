@@ -11,7 +11,9 @@ SECRET_KEY = os.getenv(
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    'web', 'localhost', '127.0.0.1', '0.0.0.0', '::', '192.168.0.7', '192.168.1.65'
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -21,6 +23,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'corsheaders',
     'django_filters',
     'rest_framework.authtoken',
     'djoser',
@@ -32,6 +35,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -65,10 +69,10 @@ DATABASES = {
             'DB_ENGINE',
             default="django.db.backends.postgresql"
         ),
-        'NAME': os.getenv('DB_NAME', default="foodgram_db"),
+        'NAME': os.getenv('DB_NAME', default="postgres"),
         'USER': os.getenv('POSTGRES_USER', default="foodgram_user"),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', default="password"),
-        'HOST': os.getenv('DB_HOST', default="localhost"),
+        'HOST': os.getenv('DB_HOST', default="db"),
         'PORT': os.getenv('DB_PORT', default="5432")
     }
 }
@@ -122,7 +126,19 @@ USE_L10N = True
 
 USE_TZ = True
 
+
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 AUTH_USER_MODEL = 'users.User'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+CORS_URLS_REGEX = r'^/api/.*$'
+
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+]
