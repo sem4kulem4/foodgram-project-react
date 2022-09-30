@@ -64,7 +64,7 @@ class RecipeIngredientAmountSerializer(serializers.ModelSerializer):
         amount = data.get('amount')
         if amount < 0:
             raise serializers.ValidationError(
-                f'Количество не может быть отрицательным!'
+                'Количество не может быть отрицательным!'
             )
         return data
 
@@ -168,13 +168,7 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
 
 
 class ShortRecipeSerializer(serializers.ModelSerializer):
-    """Короткий вариант рецепта для отображения в подписках."""
-    id = serializers.SerializerMethodField(method_name='get_id')
-    name = serializers.SerializerMethodField(method_name='get_name')
-    image = serializers.SerializerMethodField(method_name='get_image')
-    cooking_time = serializers.SerializerMethodField(
-        method_name='get_cooking_time'
-    )
+    """Короткий вариант рецепта для отображения в избранном и подписках."""
 
     class Meta:
         model = Recipe
@@ -184,22 +178,12 @@ class ShortRecipeSerializer(serializers.ModelSerializer):
             'cooking_time',
             'image'
         )
-
-    def get_id(self, obj):
-        id = int(self.context['id'])
-        return id
-
-    def get_name(self, obj):
-        name = self.context['name']
-        return name
-
-    def get_image(self, obj):
-        image = str(self.context['image'])
-        return image
-
-    def get_cooking_time(self, obj):
-        cooking_time = self.context['cooking_time']
-        return cooking_time
+        read_only_fields = (
+            'id',
+            'name',
+            'cooking_time',
+            'image'
+        )
 
 
 class FavoriteSerializer(serializers.ModelSerializer):

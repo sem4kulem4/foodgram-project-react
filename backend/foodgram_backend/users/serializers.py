@@ -178,7 +178,10 @@ class FollowOutputSerializer(serializers.Serializer):
     def get_recipes(self, obj):
         author = User.objects.get(id=self.context['id'])
         recipes = Recipe.objects.filter(author=author)
-        serializer = ShortRecipeSerializer(recipes, many=True)
+        context = {
+            'recipes': recipes
+        }
+        serializer = ShortRecipeSerializer(recipes, many=True, context=context)
         return serializer.data
 
     def get_recipes_count(self, obj):

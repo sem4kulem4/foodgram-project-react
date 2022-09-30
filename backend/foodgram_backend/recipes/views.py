@@ -1,9 +1,11 @@
 import csv
 
+import django_filters
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, status, viewsets, permissions
+from django_filters.rest_framework import DjangoFilterBackend, FilterSet
+from rest_framework import status, viewsets, permissions
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
@@ -26,14 +28,22 @@ class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     http_method_names = ('get',)
     pagination_class = None
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('^name',)
+
+
+class IngredientSearchFilter(FilterSet):
+    name = django_filters.CharFilter(lookup_expr='istartswith')
+
+    class Meta:
+        model = Ingredient
+        fields = ('name',)
 
 
 class IngredientViewSet(viewsets.ModelViewSet):
     serializer_class = IngredientsSerializer
     queryset = Ingredient.objects.all()
     http_method_names = ('get',)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = IngredientSearchFilter
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -165,16 +175,13 @@ class FavoriteViewSet(viewsets.ModelViewSet):
         favorite = Favorite.objects.create(
             user=self.request.user, recipe=recipe
         )
-        context = {
-            'id': favorite.id,
+        data = {
+            'id': favorite.recipe.id,
             'name': favorite.recipe.name,
             'image': favorite.recipe.image,
             'cooking_time': favorite.recipe.cooking_time
         }
-        serializer_output = ShortRecipeSerializer(
-            data={'recipe_id': recipe_id},
-            context=context
-        )
+        serializer_output = ShortRecipeSerializer(recipe, data=data)
 
         serializer_output.is_valid(raise_exception=True)
         return Response(
