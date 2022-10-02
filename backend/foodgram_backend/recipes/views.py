@@ -74,8 +74,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             if author_id != 0:
                 queryset = queryset.filter(author_id=author_id)
             if tags != 0:
-                for tag in tags:
-                    queryset = queryset.filter(tags__slug=tag)
+                queryset = queryset.filter(tags__slug__in=tags)
             return queryset
         return Recipe.objects.all()
 

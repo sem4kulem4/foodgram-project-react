@@ -61,10 +61,10 @@ class RecipeIngredientAmountSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'measurement_unit', 'amount')
 
     def validate(self, data):
-        amount = data.get('amount')
-        if amount < 0:
+        amount = int(data.get('amount'))
+        if amount <= 0:
             raise serializers.ValidationError(
-                'Количество не может быть отрицательным!'
+                'Количество ингредиента не может быть неположительным.'
             )
         return data
 

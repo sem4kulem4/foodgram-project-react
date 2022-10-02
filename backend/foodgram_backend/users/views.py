@@ -4,9 +4,9 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from rest_framework import mixins
 
 from .models import Follow, User
+from .mixins import ListCreateDestroyViewSet
 from .permissions import AuthorOrAdminOrReadOnly, Admin
 from .serializers import (
     CreateUserSerializer,
@@ -38,15 +38,6 @@ class UserViewSet(djoser.views.UserViewSet):
         user_id = kwargs.get('id')
         User.objects.get(id=user_id).delete()
         return Response(status=status.HTTP_200_OK)
-
-
-class ListCreateDestroyViewSet(
-    mixins.ListModelMixin,
-    mixins.CreateModelMixin,
-    mixins.DestroyModelMixin,
-    viewsets.GenericViewSet
-):
-    pass
 
 
 class FollowOnUserViewSet(ListCreateDestroyViewSet):
