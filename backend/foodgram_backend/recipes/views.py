@@ -5,7 +5,7 @@ from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet
-from rest_framework import status, viewsets, permissions
+from rest_framework import status, viewsets, permissions, filters
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
@@ -16,6 +16,7 @@ from .models import (
     TagsInRecipe, ShoppingCart,
     IngredientsInRecipe
 )
+from .filters import RecipeFilter
 from .serializers import (CreateRecipeSerializer, FavoriteSerializer,
                           IngredientsSerializer, RecipeSerializer,
                           TagSerializer, ShoppingCartSerializer,
@@ -51,6 +52,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = (AuthorOrAdminOrReadOnly,)
     pagination_class = PageNumberPagination
     pagination_class.page_size = 6
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
+    filterset_class = RecipeFilter
+    ordering_fields = ('name', 'author')
 
     def get_queryset(self):
         if not self.request.user.is_anonymous:
@@ -73,8 +77,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(shopping_cart_recipe__user=user)
             if author_id != 0:
                 queryset = queryset.filter(author_id=author_id)
-            if tags != 0:
-                queryset = queryset.filter(tags__slug__in=tags)
             return queryset
         return Recipe.objects.all()
 
